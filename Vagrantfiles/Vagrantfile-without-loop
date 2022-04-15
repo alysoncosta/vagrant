@@ -1,0 +1,43 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+NAME     = 'server'
+NETWORK  = '172.27.11.'
+PACKAGES = 'curl wget vim'
+
+Vagrant.configure("2") do |config|
+  config.vm.define "#{NAME}1" do |server1|
+    server1.vm.box = "centos/stream8"
+    server1.vm.box_version = "20210210.0"
+    server1.vm.network "private_network", ip: NETWORK + "10"
+    server1.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = "2"
+    end
+    server1.vm.provision "shell", inline: <<-SHELL
+      dnf install -y httpd #{PACKAGES}
+      systemctl enable httpd
+      systemctl start httpd
+    SHELL
+  end
+  config.vm.define "#{NAME}2" do |server2|
+    server2.vm.box = "debian/buster64"
+    server2.vm.network "private_network", ip: NETWORK + "20"
+    server2.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = "2"
+    end
+    server2.vm.provision "shell", inline: <<-SHELL
+      apt update
+      apt install -y apache2 #{PACKAGES}
+      systemctl enable apache2
+      systemctl start apache2
+    SHELL
+  end
+  config.vm.provision "shell", inline: <<-SHELL
+    id devops
+    if [ "$?" -ne 0 ]; then
+      useradd -m -d /home/devops -s /bin/bash devops
+    fi
+  SHELL
+end
