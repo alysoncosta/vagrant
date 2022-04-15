@@ -1,0 +1,29 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+DNF = 'dnf install -y httpd && systemctl start httpd && systemctl enable httpd'
+APT = 'apt update && apt install -y apache2'
+
+machines = {
+  'server1' => {'image' => 'centos/stream8', 'ip' => '10', 'shell' => DNF},
+  'server2' => {'image' => 'debian/buster64', 'ip' => '20', 'shell' => APT}
+}
+
+Vagrant.configure("2") do |config|
+  machines.each do |name,conf|
+    config.vm.define name do |machine|
+      machine.vm.box = conf['image']
+      machine.vm.network "private_network", ip: "172.27.11.#{conf['ip']}"
+      machine.vm.provision "shell", inline: <<-SHELL
+        #{conf['shell']}
+      SHELL
+      if name == 'server2'
+        machine.vm.disk :disk, name: 'iscsi', size: '10GB'
+      end
+    end
+  end
+  config.vm.provision "shell", path: "scripts/provision.sh" #também é possível colocar uma link de arquivo raw do github que o vagrant também executa
+  config.vm.provision "file",
+    source: "senha.txt",
+    destination: "/home/vagrant/.secret"
+end
